@@ -48,7 +48,30 @@ weatherCodes = {
     "302": "中雨",
     "305": "偶尔有大雨",
     "308": "大雨",
-    "311": "微冻雨"
+    "311": "微冻雨",
+    "314": "中到大冻雨",
+    "317": "小雨夹雪",
+    "320": "中到大雨夹雪",
+    "323": "局部小雪",
+    "326": "小雪",
+    "329": "局部中雪",
+    "332": "中雪",
+    "335": "局部大雪",
+    "338": "大雪",
+    "350": "冰粒",
+    "353": "小阵雨",
+    "356": "中到大阵雨",
+    "359": "暴雨阵雨",
+    "362": "小雨夹雪阵雨",
+    "365": "中到大雨夹雪阵雨",
+    "368": "小雪阵雪",
+    "371": "中到大雪阵雪",
+    "374": "小阵冰粒",
+    "377": "中到大阵冰粒",
+    "386": "局部雷雨",
+    "389": "中到大雷雨",
+    "392": "局部雷雪",
+    "395": "中到大雷雪",
 }
 
 def get_historical_weather():
@@ -74,9 +97,7 @@ def get_historical_weather():
             max_temp = int(day["maxtempC"])
             min_temp = int(day["mintempC"])
             weatherCode = day["hourly"][0]["weatherCode"]
-            print('weatherCode::::' + weatherCode)
             weather = weatherCodes[weatherCode]
-            print('weather::::' + weather)
             icon = day["hourly"][0]["weatherIconUrl"][0]["value"]
             all_data.append({
                 "year": year,
