@@ -2,11 +2,19 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import requests
-from openai import OpenAI
+import calendar
+from datetime import datetime
+
+# 配置参数
+API_KEY = "4b412cd28c1a4b50adb184728252905"
+CITY = "Lijiang,China"
+# 选择需要查看的年份（2020, 2021, 2022, 2023, 2024, 2025）
+START_YEAR = 2020
+END_YEAR = 2022
+# 选择需要产看的月份
+MONTH = 11
 
 app = FastAPI()
-
-# 允许微信小程序域名（需替换为你的）
 app.add_middleware(
     CORSMiddleware,
     # allow_origins=["https://www.weixin.qq.com"],
@@ -15,73 +23,105 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-client = OpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"),  # 从.env加载
-    base_url="https://api.deepseek.com/v1"  # 关键：修改API地址
-)
+weatherCodes = {
+    "113": "晴天",
+    "116": "局部多云",
+    "119": "多云",
+    "122": "阴天",
+    "143": "薄雾",
+    "176": "周边有零星小雨",
+    "179": "周边有零星小雪",
+    "182": "周边有零星小雨夹雪",
+    "185": "周边有有零星小冻雾雨",
+    "200": "周边有雷雨",
+    "227": "飞雪",
+    "230": "暴风雪",
+    "248": "雾",
+    "260": "冻雾",
+    "263": "零星细雨",
+    "266": "细雨",
+    "281": "冻雾雨",
+    "284": "大冻雾雨",
+    "293": "片状小雨",
+    "296": "小雨",
+    "299": "偶尔有中雨",
+    "302": "中雨",
+    "305": "偶尔有大雨",
+    "308": "大雨",
+    "311": "微冻雨"
+}
 
-
-def get_weather(city: str) -> dict:
-    """调用OpenWeatherMap API获取天气数据"""
-    API_KEY = os.getenv("OWM_API_KEY")
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric&lang=zh_cn"
+def get_historical_weather():
+    all_data = []
     
-    try:
-        response = requests.get(url)
+    for year in range(START_YEAR, END_YEAR + 1):
+        url = f"http://api.worldweatheronline.com/premium/v1/past-weather.ashx"
+        _, last_day = calendar.monthrange(year, MONTH)
+        params = {
+            "key": API_KEY,
+            "q": CITY,
+            "date": f"{year}-{MONTH:02d}-01",
+            "enddate": f"{year}-{MONTH:02d}-{last_day}",
+            "tp": 24,
+            "format": "json"
+        }
+        response = requests.get(url, params=params)
         data = response.json()
-        
-        if response.status_code == 200:
-            return {
-                "temp": data["main"]["temp"],
-                "description": data["weather"][0]["description"],
-                "humidity": data["main"]["humidity"],
-                "icon": data["weather"][0]["icon"]  # 用于后续显示天气图标
-            }
-        else:
-            return {"error": f"API错误: {data.get('message', '未知错误')}"}
-    except Exception as e:
-        return {"error": f"网络异常: {str(e)}"}
+        for day in data["data"]["weather"]:
+            date_str = day["date"]
+            sunrise = day["astronomy"][0]["sunrise"]
+            sunset = day["astronomy"][0]["sunset"]
+            max_temp = int(day["maxtempC"])
+            min_temp = int(day["mintempC"])
+            weatherCode = day["hourly"][0]["weatherCode"]
+            weather = weatherCodes[weatherCode]
+            icon = day["hourly"][0]["weatherIconUrl"][0]["value"]
+            all_data.append({
+                "year": year,
+                "date": datetime.strptime(date_str, "%Y-%m-%d"),
+                "sunrise": sunrise,
+                "sunset": sunset,
+                "max_temp": max_temp,
+                "min_temp": min_temp,
+                "weather": weather,
+                "icon": icon
+            })
     
-def generate_anime_weather(city: str, weather_data: dict) -> str:
-    """使用DeepSeek生成动漫风格天气"""
-    prompt = f"""
-    你是一个精通动漫的助手，请用以下规则描述天气：
-    1. 结合知名动漫场景比喻（如《你的名字》《天气之子》）
-    2. 语气活泼，加入颜文字(如~☆ヽ(≧▽≦)ﾉ)
-    3. 根据天气推荐动漫角色穿搭
-    4. 使用以下天气数据：
-       - 城市: {city}
-       - 温度: {weather_data['temp']}°C
-       - 天气状况: {weather_data['description']}
-    """
-    try:
-        response = client.chat.completions.create(
-            model="deepseek-chat",  # DeepSeek专用模型
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.8,
-            max_tokens=200
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"⚠️ DeepSeek生成失败: {str(e)}"
+    return all_data
+
+# # 获取并处理数据
+# df = get_historical_weather()
+
+# # 计算平均温度
+# df["avg_temp"] = (df["max_temp"] + df["min_temp"]) / 2
+
+# # 按年份分组统计
+# summary = df.groupby("year").agg({
+#     "avg_temp": ["mean", "min", "max"],
+#     "condition": lambda x: x.mode()[0]  # 最常见天气
+# }).reset_index()
+
+# # 重命名列
+# summary.columns = ["year", "avg_temp", "min_temp", "max_temp", "most_common_weather"]
+
     
-async def weather(city: str):
-    weather_data = get_weather(city)
-    if "error" in weather_data:
-        return(f"❌ 获取天气失败: {weather_data['error']}")
-    else:
-        basic_info = (
-            f"🌆 {city}天气：\n"
-            f"🌡️ 温度: {weather_data['temp']}°C\n"
-            f"📝 描述: {weather_data['description']}\n"
-            f"💧 湿度: {weather_data['humidity']}%"
-        )
-        anime_reply = generate_anime_weather(city, weather_data)
-        return (f"{basic_info}\n\n🎭 动漫版：\n{anime_reply}")
+# async def weather(city: str):
+#     weather_data = get_historical_weather(city)
+#     if "error" in weather_data:
+#         return(f"❌ 获取天气失败: {weather_data['error']}")
+#     else:
+#         basic_info = (
+#             f"🌆 {city}天气：\n"
+#             f"🌡️ 温度: {weather_data['temp']}°C\n"
+#             f"📝 描述: {weather_data['description']}\n"
+#             f"💧 湿度: {weather_data['humidity']}%"
+#         )
+#         anime_reply = generate_anime_weather(city, weather_data)
+#         return (f"{basic_info}\n\n🎭 动漫版：\n{anime_reply}")
 
 @app.post("/api/ai-tools")
 async def ai_tools(request: Request):
     data = await request.json()
     user_prompt = data.get("prompt", "")
-    res = await weather(user_prompt)
+    res = await get_historical_weather()
     return {"response": f"AI处理结果: {res}"}
