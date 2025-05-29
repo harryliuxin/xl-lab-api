@@ -146,5 +146,5 @@ def get_historical_weather():
 async def ai_tools(request: Request):
     data = await request.json()
     user_prompt = data.get("prompt", "")
-    res = await get_historical_weather()
+    res = get_historical_weather()
     return {"response": f"AI处理结果: {res}"}
