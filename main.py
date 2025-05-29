@@ -91,7 +91,7 @@ def get_historical_weather():
         response = requests.get(url, params=params)
         data = response.json()
         for day in data["data"]["weather"]:
-            date_str = day["date"]
+            date = day["date"]
             sunrise = day["astronomy"][0]["sunrise"]
             sunset = day["astronomy"][0]["sunset"]
             max_temp = int(day["maxtempC"])
@@ -101,7 +101,7 @@ def get_historical_weather():
             icon = day["hourly"][0]["weatherIconUrl"][0]["value"]
             all_data.append({
                 "year": year,
-                "date": datetime.strptime(date_str, "%Y-%m-%d"),
+                "date": date,
                 "sunrise": sunrise,
                 "sunset": sunset,
                 "max_temp": max_temp,
