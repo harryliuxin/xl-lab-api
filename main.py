@@ -74,7 +74,9 @@ def get_historical_weather():
             max_temp = int(day["maxtempC"])
             min_temp = int(day["mintempC"])
             weatherCode = day["hourly"][0]["weatherCode"]
+            print('weatherCode::::' + weatherCode)
             weather = weatherCodes[weatherCode]
+            print('weather::::' + weather)
             icon = day["hourly"][0]["weatherIconUrl"][0]["value"]
             all_data.append({
                 "year": year,
