@@ -9,10 +9,9 @@ from datetime import datetime
 API_KEY = "4b412cd28c1a4b50adb184728252905"
 CITY = "Lijiang,China"
 # 选择需要查看的年份（2020, 2021, 2022, 2023, 2024, 2025）
-START_YEAR = 2020
-END_YEAR = 2022
+year = 2023
 # 选择需要产看的月份
-MONTH = 11
+month = 11
 
 app = FastAPI()
 app.add_middleware(
@@ -76,39 +75,38 @@ weatherCodes = {
 
 def get_historical_weather():
     all_data = []
-    
-    for year in range(START_YEAR, END_YEAR + 1):
-        url = f"http://api.worldweatheronline.com/premium/v1/past-weather.ashx"
-        _, last_day = calendar.monthrange(year, MONTH)
-        params = {
-            "key": API_KEY,
-            "q": CITY,
-            "date": f"{year}-{MONTH:02d}-01",
-            "enddate": f"{year}-{MONTH:02d}-{last_day}",
-            "tp": 24,
-            "format": "json"
-        }
-        response = requests.get(url, params=params)
-        data = response.json()
-        for day in data["data"]["weather"]:
-            date = day["date"]
-            sunrise = day["astronomy"][0]["sunrise"]
-            sunset = day["astronomy"][0]["sunset"]
-            max_temp = int(day["maxtempC"])
-            min_temp = int(day["mintempC"])
-            weatherCode = day["hourly"][0]["weatherCode"]
-            weather = weatherCodes[weatherCode]
-            icon = day["hourly"][0]["weatherIconUrl"][0]["value"]
-            all_data.append({
-                "year": year,
-                "date": date,
-                "sunrise": sunrise,
-                "sunset": sunset,
-                "max_temp": max_temp,
-                "min_temp": min_temp,
-                "weather": weather,
-                "icon": icon
-            })
+
+    url = f"http://api.worldweatheronline.com/premium/v1/past-weather.ashx"
+    _, last_day = calendar.monthrange(year, month)
+    params = {
+        "key": API_KEY,
+        "q": CITY,
+        "date": f"{year}-{month:02d}-01",
+        "enddate": f"{year}-{month:02d}-{last_day}",
+        "tp": 24,
+        "format": "json"
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+    for day in data["data"]["weather"]:
+        date = day["date"]
+        sunrise = day["astronomy"][0]["sunrise"]
+        sunset = day["astronomy"][0]["sunset"]
+        max_temp = int(day["maxtempC"])
+        min_temp = int(day["mintempC"])
+        weatherCode = day["hourly"][0]["weatherCode"]
+        weather = weatherCodes[weatherCode]
+        icon = day["hourly"][0]["weatherIconUrl"][0]["value"]
+        all_data.append({
+            "year": year,
+            "date": date,
+            "sunrise": sunrise,
+            "sunset": sunset,
+            "max_temp": max_temp,
+            "min_temp": min_temp,
+            "weather": weather,
+            "icon": icon
+        })
     
     return all_data
 
