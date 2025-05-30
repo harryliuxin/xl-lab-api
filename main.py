@@ -4,14 +4,32 @@ import os
 import requests
 import calendar
 from datetime import datetime
+from pydantic import BaseModel
 
 # 配置参数
 API_KEY = "4b412cd28c1a4b50adb184728252905"
-CITY = "Lijiang,China"
-# 选择需要查看的年份（2020, 2021, 2022, 2023, 2024, 2025）
-year = 2023
-# 选择需要产看的月份
-month = 11
+# 请求体模型
+class WeatherRequest(BaseModel):
+    city: str
+    year: int
+    month: int
+# 模拟数据返回结构
+class WeatherData(BaseModel):
+    year: int
+    date: str
+    sunrise: str
+    sunset: str
+    max_temp: int
+    min_temp: int
+    weather: str
+    icon: str
+
+
+# city = "Lijiang,China"
+# # 选择需要查看的年份（2020, 2021, 2022, 2023, 2024, 2025）
+# year = 2023
+# # 选择需要产看的月份
+# month = 11
 
 app = FastAPI()
 app.add_middleware(
@@ -73,14 +91,14 @@ weatherCodes = {
     "395": "中到大雷雪",
 }
 
-def get_historical_weather():
+def get_historical_weather(city, year, month):
     all_data = []
 
     url = f"http://api.worldweatheronline.com/premium/v1/past-weather.ashx"
     _, last_day = calendar.monthrange(year, month)
     params = {
         "key": API_KEY,
-        "q": CITY,
+        "q": city,
         "date": f"{year}-{month:02d}-01",
         "enddate": f"{year}-{month:02d}-{last_day}",
         "tp": 24,
@@ -141,8 +159,6 @@ def get_historical_weather():
 #         return (f"{basic_info}\n\n🎭 动漫版：\n{anime_reply}")
 
 @app.post("/api/ai-tools")
-async def ai_tools(request: Request):
-    data = await request.json()
-    user_prompt = data.get("prompt", "")
-    res = get_historical_weather()
+async def ai_tools(req: WeatherRequest):
+    res = get_historical_weather(req.city, req.year, req.month)
     return {"response": res}
